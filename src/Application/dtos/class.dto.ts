@@ -6,27 +6,41 @@ export enum ClassServiceTokens {
 
 export interface CreateClassDTO {
   name: string;
-  teacher: string;
+  location: string;
   startAt: string | Date;
   closeAt: string | Date;
-  studentCount?: number;
 }
 
 export interface UpdateClassDTO {
   name?: string;
-  teacher?: string;
+  location?: string;
   startAt?: string | Date;
   closeAt?: string | Date;
-  studentCount?: number;
+}
+
+export interface UpdateScheduleDTO {
+  fromHour: number;
+  toHour: number;
+}
+
+export interface UpdateStudentCountDTO {
+  studentCount: number;
+}
+
+export interface AssignTeacherDTO {
+  teacher: string;
 }
 
 export interface ClassResponseDTO {
   id: number;
   name: string;
-  teacher: string;
+  location: string;
+  teacher: string | null;
   studentCount: number;
   startAt: Date;
   closeAt: Date;
+  fromHour: number | null;
+  toHour: number | null;
   status: ClassStatus;
 }
 
@@ -36,10 +50,9 @@ export interface IClassesService {
   createClass(dto: CreateClassDTO): Promise<ClassResponseDTO>;
   updateClass(id: number, dto: UpdateClassDTO): Promise<ClassResponseDTO>;
   deleteClass(id: number): Promise<void>;
-  requestOpen(id: number): Promise<ClassResponseDTO>;
-  approveOpen(id: number): Promise<ClassResponseDTO>;
-  pauseClass(id: number): Promise<ClassResponseDTO>;
-  resumeClass(id: number): Promise<ClassResponseDTO>;
-  finishClass(id: number): Promise<ClassResponseDTO>;
+  updateSchedule(id: number, dto: UpdateScheduleDTO): Promise<ClassResponseDTO>;
+  updateStudentCount(id: number, dto: UpdateStudentCountDTO): Promise<ClassResponseDTO>;
+  assignTeacher(id: number, dto: AssignTeacherDTO): Promise<ClassResponseDTO>;
+  approveShortage(id: number): Promise<ClassResponseDTO>;
 }
 

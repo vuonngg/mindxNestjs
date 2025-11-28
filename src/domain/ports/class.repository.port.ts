@@ -2,11 +2,14 @@ import { Class } from '../entities/Class';
 
 export interface ClassUpdatePayload {
   name?: string;
-  teacher?: string;
+  location?: string;
+  teacher?: string | null;
   startAt?: Date;
   closeAt?: Date;
   status?: string;
   studentCount?: number;
+  fromHour?: number | null;
+  toHour?: number | null;
 }
 
 export interface IClassRepositoryPort {

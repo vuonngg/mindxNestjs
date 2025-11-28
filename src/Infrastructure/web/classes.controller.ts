@@ -9,11 +9,15 @@ import {
   Put,
 } from '@nestjs/common';
 import type {
+  AssignTeacherDTO,
   CreateClassDTO,
   IClassesService,
   UpdateClassDTO,
+  UpdateScheduleDTO,
+  UpdateStudentCountDTO,
 } from '../../Application/dtos/class.dto';
 import { ClassServiceTokens } from '../../Application/dtos/class.dto';
+
 @Controller('/api/classes')
 export class ClassesController {
   constructor(
@@ -41,34 +45,32 @@ export class ClassesController {
     return this.classesService.updateClass(+id, dto);
   }
 
+  @Put(':id/schedule')
+  updateSchedule(@Param('id') id: string, @Body() dto: UpdateScheduleDTO) {
+    return this.classesService.updateSchedule(+id, dto);
+  }
+
+  @Put(':id/student-count')
+  updateStudentCount(
+    @Param('id') id: string,
+    @Body() dto: UpdateStudentCountDTO,
+  ) {
+    return this.classesService.updateStudentCount(+id, dto);
+  }
+
+  @Put(':id/teacher')
+  assignTeacher(@Param('id') id: string, @Body() dto: AssignTeacherDTO) {
+    return this.classesService.assignTeacher(+id, dto);
+  }
+
+  @Post(':id/approve-shortage')
+  approveShortage(@Param('id') id: string) {
+    return this.classesService.approveShortage(+id);
+  }
+
   @Delete(':id')
   delete(@Param('id') id: string) {
     return this.classesService.deleteClass(+id);
-  }
-
-  @Post(':id/request-open')
-  requestOpen(@Param('id') id: string) {
-    return this.classesService.requestOpen(+id);
-  }
-
-  @Post(':id/approve-open')
-  approveOpen(@Param('id') id: string) {
-    return this.classesService.approveOpen(+id);
-  }
-
-  @Post(':id/pause')
-  pause(@Param('id') id: string) {
-    return this.classesService.pauseClass(+id);
-  }
-
-  @Post(':id/resume')
-  resume(@Param('id') id: string) {
-    return this.classesService.resumeClass(+id);
-  }
-
-  @Post(':id/finish')
-  finish(@Param('id') id: string) {
-    return this.classesService.finishClass(+id);
   }
 }
 

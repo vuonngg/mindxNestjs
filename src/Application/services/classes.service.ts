@@ -6,9 +6,12 @@ import type {
   ClassUpdatePayload,
 } from '../../domain/ports/class.repository.port';
 import {
+  AssignTeacherDTO,
   ClassResponseDTO,
   CreateClassDTO,
   UpdateClassDTO,
+  UpdateScheduleDTO,
+  UpdateStudentCountDTO,
   IClassesService,
   ClassServiceTokens,
 } from '../dtos/class.dto';
@@ -33,8 +36,7 @@ export class ClassesService implements IClassesService {
   async createClass(dto: CreateClassDTO): Promise<ClassResponseDTO> {
     const classEntity = Class.create({
       name: dto.name,
-      teacher: dto.teacher,
-      studentCount: dto.studentCount ?? 0,
+      location: dto.location,
       startAt: this.toDate(dto.startAt),
       closeAt: this.toDate(dto.closeAt),
     });
@@ -44,15 +46,12 @@ export class ClassesService implements IClassesService {
 
   async updateClass(id: number, dto: UpdateClassDTO): Promise<ClassResponseDTO> {
     const classEntity = await this.findOrThrow(id);
-    classEntity.updateInformation({
+    classEntity.updateBasicInfo({
       name: dto.name,
-      teacher: dto.teacher,
+      location: dto.location,
       startAt: dto.startAt ? this.toDate(dto.startAt) : undefined,
       closeAt: dto.closeAt ? this.toDate(dto.closeAt) : undefined,
     });
-    if (typeof dto.studentCount === 'number') {
-      classEntity.adjustStudentCount(dto.studentCount - classEntity.studentCount);
-    }
     const updated = await this.persistEntity(classEntity);
     return this.toDTO(updated);
   }
@@ -61,37 +60,33 @@ export class ClassesService implements IClassesService {
     await this.classRepository.delete(id);
   }
 
-  async requestOpen(id: number): Promise<ClassResponseDTO> {
+  async updateSchedule(id: number, dto: UpdateScheduleDTO): Promise<ClassResponseDTO> {
     const classEntity = await this.findOrThrow(id);
-    classEntity.requestOpen();
+    classEntity.updateSchedule(dto.fromHour, dto.toHour);
     const updated = await this.persistEntity(classEntity);
     return this.toDTO(updated);
   }
 
-  async approveOpen(id: number): Promise<ClassResponseDTO> {
+  async updateStudentCount(
+    id: number,
+    dto: UpdateStudentCountDTO,
+  ): Promise<ClassResponseDTO> {
     const classEntity = await this.findOrThrow(id);
-    classEntity.approveOpen(new Date());
+    classEntity.updateStudentCount(dto.studentCount);
     const updated = await this.persistEntity(classEntity);
     return this.toDTO(updated);
   }
 
-  async pauseClass(id: number): Promise<ClassResponseDTO> {
+  async assignTeacher(id: number, dto: AssignTeacherDTO): Promise<ClassResponseDTO> {
     const classEntity = await this.findOrThrow(id);
-    classEntity.pause();
+    classEntity.assignTeacher(dto.teacher);
     const updated = await this.persistEntity(classEntity);
     return this.toDTO(updated);
   }
 
-  async resumeClass(id: number): Promise<ClassResponseDTO> {
+  async approveShortage(id: number): Promise<ClassResponseDTO> {
     const classEntity = await this.findOrThrow(id);
-    classEntity.resume(new Date());
-    const updated = await this.persistEntity(classEntity);
-    return this.toDTO(updated);
-  }
-
-  async finishClass(id: number): Promise<ClassResponseDTO> {
-    const classEntity = await this.findOrThrow(id);
-    classEntity.finish(new Date());
+    classEntity.approveShortage();
     const updated = await this.persistEntity(classEntity);
     return this.toDTO(updated);
   }
@@ -107,11 +102,14 @@ export class ClassesService implements IClassesService {
   private async persistEntity(classEntity: Class): Promise<Class> {
     const payload: ClassUpdatePayload = {
       name: classEntity.name,
+      location: classEntity.location,
       teacher: classEntity.teacher,
       startAt: classEntity.startAt,
       closeAt: classEntity.closeAt,
       status: classEntity.status,
       studentCount: classEntity.studentCount,
+      fromHour: classEntity.fromHour,
+      toHour: classEntity.toHour,
     };
     const updated = await this.classRepository.update(classEntity.id, payload);
     if (!updated) {
@@ -124,10 +122,13 @@ export class ClassesService implements IClassesService {
     return {
       id: classEntity.id,
       name: classEntity.name,
+      location: classEntity.location,
       teacher: classEntity.teacher,
       studentCount: classEntity.studentCount,
       startAt: classEntity.startAt,
       closeAt: classEntity.closeAt,
+      fromHour: classEntity.fromHour,
+      toHour: classEntity.toHour,
       status: classEntity.status,
     };
   }

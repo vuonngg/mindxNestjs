@@ -11,10 +11,19 @@ export class ClassModel {
   name!: string;
 
   @Prop({ required: true, trim: true })
-  teacher!: string;
+  location!: string;
 
-  @Prop({ required: true, min: 0 })
+  @Prop({ type: String, trim: true, default: null })
+  teacher!: string | null;
+
+  @Prop({ required: true, min: 0, default: 0 })
   studentCount!: number;
+
+  @Prop({ type: Number, min: 0, max: 23, default: null })
+  fromHour!: number | null;
+
+  @Prop({ type: Number, min: 0, max: 23, default: null })
+  toHour!: number | null;
 
   @Prop({ required: true })
   startAt!: Date;

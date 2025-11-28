@@ -9,7 +9,7 @@ import { ClassesModule } from './classes.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true,
+      isGlobal: true, 
       envFilePath: ['.env', '.env.local'],
     }),
     MongooseModule.forRootAsync({

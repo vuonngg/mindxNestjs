@@ -20,8 +20,11 @@ export class ClassesMongoDao {
 
   async create(payload: {
     name: string;
-    teacher: string;
+    location: string;
+    teacher: string | null;
     studentCount: number;
+    fromHour: number | null;
+    toHour: number | null;
     startAt: Date;
     closeAt: Date;
     status: string;
@@ -37,11 +40,14 @@ export class ClassesMongoDao {
     classId: number,
     updatedFields: Partial<{
       name: string;
-      teacher: string;
+      location: string;
+      teacher: string | null;
       startAt: Date;
       closeAt: Date;
       status: string;
       studentCount: number;
+      fromHour: number | null;
+      toHour: number | null;
     }>,
   ): Promise<ClassDocument | null> {
     return this.classModel

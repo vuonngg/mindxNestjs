@@ -5,110 +5,53 @@ export class Class {
   private constructor(
     private readonly _id: number,
     private _name: string,
-    private _teacher: string,
-    private _studentCount: number,
+    private _location: string,
     private _startAt: Date,
     private _closeAt: Date,
+    private _teacher: string | null,
+    private _studentCount: number,
+    private _fromHour: number | null,
+    private _toHour: number | null,
     status: ClassStatus,
   ) {
     this.ensureDatesAreValid(_startAt, _closeAt);
-    this.ensureStudentCountsAreValid(_studentCount);
     this.ensureTeacherInformation(_teacher);
+    this.ensureStudentCountsAreValid(_studentCount);
+    this.ensureScheduleIsValid(_fromHour, _toHour);
     this._status = status;
   }
 
   static create(params: {
     name: string;
-    teacher: string;
-    studentCount?: number;
+    location: string;
     startAt: Date;
     closeAt: Date;
   }): Class {
     return new Class(
       0,
       params.name,
-      params.teacher,
-      params.studentCount ?? 0,
+      params.location,
       params.startAt,
       params.closeAt,
-      ClassStatus.PREPARING,
+      null,
+      0,
+      null,
+      null,
+      ClassStatus.NEW,
     );
   }
 
-  static reconstitute(params: {
-    id: number;
-    name: string;
-    teacher: string;
-    studentCount: number;
-    startAt: Date;
-    closeAt: Date;
-    status: ClassStatus;
-  }): Class {
-    return new Class(
-      params.id,
-      params.name,
-      params.teacher,
-      params.studentCount,
-      params.startAt,
-      params.closeAt,
-      params.status,
-    );
-  }
-
-  requestOpen(): void {
-    this.assertStatus(ClassStatus.PREPARING, 'Only classes in PREPARING can request to open');
-    this._status = ClassStatus.OPEN_REQUEST;
-  }
-
-  approveOpen(currentDate: Date = new Date()): void {
-    this.assertStatus(ClassStatus.OPEN_REQUEST, 'Only classes in OPEN_REQUEST can be approved');
-    if (currentDate < this._startAt) {
-      throw new Error('Cannot open class before start date');
-    }
-    if (this._studentCount < Class.MINIMUM_STUDENTS) {
-      throw new Error(`Need at least ${Class.MINIMUM_STUDENTS} students to open the class`);
-    }
-    this._status = ClassStatus.OPEN;
-  }
-
-  pause(): void {
-    this.assertStatus(ClassStatus.OPEN, 'Only classes in OPEN can be paused');
-    this._status = ClassStatus.PENDING;
-  }
-
-  resume(currentDate: Date = new Date()): void {
-    this.assertStatus(ClassStatus.PENDING, 'Only classes in PENDING can resume');
-    if (currentDate > this._closeAt) {
-      throw new Error('Cannot resume a class after its end date');
-    }
-    this._status = ClassStatus.OPEN;
-  }
-
-  finish(currentDate: Date = new Date()): void {
-    if (![ClassStatus.OPEN, ClassStatus.PENDING].includes(this._status)) {
-      throw new Error('Only OPEN or PENDING classes can be finished');
-    }
-    if (currentDate < this._startAt) {
-      throw new Error('Cannot finish a class before it starts');
-    }
-    this._status = ClassStatus.FINISHED;
-  }
-
-  updateInformation(params: {
+  updateBasicInfo(params: {
     name?: string;
-    teacher?: string;
+    location?: string;
     startAt?: Date;
     closeAt?: Date;
   }): void {
-    if (![ClassStatus.PREPARING, ClassStatus.PENDING].includes(this._status)) {
-      throw new Error('Only PREPARING or PENDING classes can be updated');
-    }
     if (params.name) {
       this._name = params.name;
     }
-    if (params.teacher) {
-      this.ensureTeacherInformation(params.teacher);
-      this._teacher = params.teacher;
+    if (params.location) {
+      this._location = params.location;
     }
     if (params.startAt || params.closeAt) {
       const newStart = params.startAt ?? this._startAt;
@@ -119,37 +62,95 @@ export class Class {
     }
   }
 
-  adjustStudentCount(delta: number): void {
-    const newCount = this._studentCount + delta;
-    if (newCount < 0) {
+  static reconstitute(params: {
+    id: number;
+    name: string;
+    location: string;
+    startAt: Date;
+    closeAt: Date;
+    teacher: string | null;
+    studentCount: number;
+    fromHour: number | null;
+    toHour: number | null;
+    status: ClassStatus;
+  }): Class {
+    return new Class(
+      params.id,
+      params.name,
+      params.location,
+      params.startAt,
+      params.closeAt,
+      params.teacher,
+      params.studentCount,
+      params.fromHour,
+      params.toHour,
+      params.status,
+    );
+  }
+
+  updateSchedule(fromHour: number, toHour: number): void {
+    this.ensureScheduleIsValid(fromHour, toHour);
+    if (fromHour >= toHour) {
+      throw new Error('fromHour must be earlier than toHour');
+    }
+    this._fromHour = fromHour;
+    this._toHour = toHour;
+    if (this._status === ClassStatus.NEW) {
+      this._status = ClassStatus.PREPARING;
+    }
+  }
+
+  updateStudentCount(count: number): void {
+    this.ensureStudentCountsAreValid(count);
+    if (count < 0) {
       throw new Error('Student count cannot be negative');
     }
-    this._studentCount = newCount;
+    this._studentCount = count;
+    if (this._studentCount >= Class.MINIMUM_STUDENTS && this._status === ClassStatus.PREPARING) {
+      this._status = ClassStatus.OPEN_REQUEST;
+    }
+  }
+
+  assignTeacher(teacher: string): void {
+    if (this._status !== ClassStatus.OPEN_REQUEST) {
+      throw new Error('Teacher can only be assigned when class is in OPEN_REQUEST');
+    }
+    this.ensureTeacherInformation(teacher);
+    this._teacher = teacher;
+    this._status = ClassStatus.OPEN;
+  }
+
+  approveShortage(): void {
+    if (this._status !== ClassStatus.PREPARING) {
+      throw new Error('Only prepping classes can be manually approved');
+    }
+    this._status = ClassStatus.OPEN_REQUEST;
   }
 
   private ensureDatesAreValid(startAt: Date, closeAt: Date): void {
     if (startAt >= closeAt) {
-      throw new Error('Start date must be before end date');
+      throw new Error('Thời gian bắt đầu không được lớn hơn thời gian kết thúc');
     }
   }
 
-  private ensureStudentCountsAreValid(currentCount: number): void {
-    if (currentCount < 0) {
-      throw new Error('Current student count cannot be negative');
+  private ensureStudentCountsAreValid(studentCount: number): void {
+    if (studentCount < 0) {
+      throw new Error('Student count cannot be negative');
     }
   }
 
-  private ensureTeacherInformation(teacher: string): void {
-    if (!teacher || !teacher.trim()) {
-      throw new Error('Teacher information is required');
+  private ensureScheduleIsValid(fromHour: number | null, toHour: number | null): void {
+    if (fromHour !== null && toHour !== null && fromHour >= toHour) {
+      throw new Error('fromHour must be earlier than toHour');
     }
   }
 
-  private assertStatus(expected: ClassStatus, message: string): void {
-    if (this._status !== expected) {
-      throw new Error(message);
+  private ensureTeacherInformation(teacher: string | null): void {
+    if (teacher !== null && !teacher.trim()) {
+      throw new Error('Teacher information must be valid');
     }
   }
+
 
   get id(): number {
     return this._id;
@@ -159,12 +160,8 @@ export class Class {
     return this._name;
   }
 
-  get teacher(): string {
-    return this._teacher;
-  }
-
-  get studentCount(): number {
-    return this._studentCount;
+  get location(): string {
+    return this._location;
   }
 
   get startAt(): Date {
@@ -175,15 +172,29 @@ export class Class {
     return this._closeAt;
   }
 
+  get teacher(): string | null {
+    return this._teacher;
+  }
+
+  get studentCount(): number {
+    return this._studentCount;
+  }
+
+  get fromHour(): number | null {
+    return this._fromHour;
+  }
+
+  get toHour(): number | null {
+    return this._toHour;
+  }
+
   get status(): ClassStatus {
     return this._status;
   }
 }
-
 export enum ClassStatus {
   NEW = 'NEW',
   PREPARING = 'PREPARING',
-  PLANNING = 'PLANNING',
   OPEN_REQUEST = 'OPEN_REQUEST',
   OPEN = 'OPEN',
   PENDING = 'PENDING',
